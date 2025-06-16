@@ -2,8 +2,29 @@
 
 # Prepare ------------------------------------------------------------------------------------------
 # Check if user flags for specific pokemon
-pokemon="$((1 + RANDOM % 905))"
+pokemon=""
+while getopts "n:" opt; do
+  case ${opt} in
+    n)
+      pokemon="${OPTARG}"
+      ;;
+    *)
+      echo "Usage: pokefetch [-n number]" >&2
+      exit 1
+      ;;
+  esac
+done
 
+# Choose random pokemon if no flag
+if [ -z "$pokemon" ]; then
+  pokemon=$((1 + RANDOM % 905))
+fi
+
+# Check if within bounds
+if ! [ "$pokemon" -ge 1 ] 2>/dev/null || ! [ "$pokemon" -le 905 ]; then
+  echo "Error: Pokemon number must be between 1 and 905"
+  exit 1
+fi
 
 data_pokemon=$(curl -fsLS "https://pokeapi.co/api/v2/pokemon/${pokemon}")
 data_species=$(curl -fsLS "$(echo "${data_pokemon}" | jq --raw-output .species.url)")
@@ -50,7 +71,7 @@ info=$(gum join --vertical "${title}" '' "${status}")
 entries=$(gum style --border normal --padding '0 1' --width 42 "$(echo "${clean_species}" | \
 jq --raw-output 'last(.flavor_text_entries | .[] | select(.language.name == "en")).flavor_text' | tr -d "\n")")
 
-pokemon_path=$(echo "${data_pokemon}" | jq --raw-output .name)
+pokemon_path=$(echo "${data_pokemon}" | jq --raw-output .name | sed -E 's/-.*//')
 art_raw=$(curl -fsLS \
 "https://gitlab.com/phoneybadger/pokemon-colorscripts/-/raw/main/colorscripts/small/regular/${pokemon_path}" \
 | sed -e 's/$/[0m/g')
